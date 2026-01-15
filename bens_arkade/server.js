@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const multer = require("multer");
 const WebSocket = require("ws");
 
+
 const app = express();
 const db = new sqlite.Database("bossarcade.db");
 
@@ -47,22 +48,41 @@ app.post("/score",(req,res)=>{
  }
 });
 
+app.post("/register", (req, res) => {
+  const { email, pass } = req.body;
+
+  if(!email || !pass) return res.status(400).send("Email und Passwort erforderlich");
+
+  bcrypt.hash(pass, 10, (err, hash) => {
+    if(err) return res.status(500).send("Server-Fehler");
+
+    db.run("INSERT INTO users(email, pass) VALUES(?,?)", [email, hash], (err) => {
+      if(err){
+        if(err.code === "SQLITE_CONSTRAINT") return res.status(400).send("Email existiert bereits");
+        return res.status(500).send("Server-Fehler");
+      }
+      res.status(200).send("Registrierung erfolgreich");
+    });
+  });
+});
+
 app.listen(3000, ()=>console.log("Boss Arcade läuft auf Port 3000"));
 
-app.post("/login", (req,res)=>{
-  const {email, pass} = req.body;
-  db.get("SELECT * FROM users WHERE email=?",[email], (err,user)=>{
-    if(!user) return res.status(401).send("Falsche Zugangsdaten!");
-    
-    bcrypt.compare(pass, user.pass, (err,result)=>{
-      if(result) {
-        // ✅ Zugang OK
-        const token = jwt.sign({id:user.id}, "bosskey");
-        res.send(token);
-      } else {
-        // ❌ Zugang falsch
-        res.status(401).send("Falsche Zugangsdaten!");
-      }
+app.post("/login", (req, res) => {
+  const { email, pass } = req.body;
+
+  db.get("SELECT * FROM users WHERE email=?", [email], (err, user) => {
+    if (err) return res.status(500).send("Server-Fehler");
+
+    if (!user) return res.status(401).send("Falsche Zugangsdaten");
+
+    bcrypt.compare(pass, user.pass, (err, ok) => {
+      if (err) return res.status(500).send("Server-Fehler");
+      if (!ok) return res.status(401).send("Falsche Zugangsdaten");
+
+      // ✅ Zugang OK
+      const token = jwt.sign({ id: user.id }, "bosskey");
+      res.status(200).send(token);
     });
   });
 });
