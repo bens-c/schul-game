@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Space Blaster</title>
+<style>
+body{
+  margin:0;
+  background:black;
+  color:white;
+  text-align:center;
+  font-family:Arial;
+}
+canvas{
+  background:#000;
+  display:block;
+  margin:auto;
+  border:2px solid #0f0;
+}
+</style>
+</head>
+<body>
+
+<h1>🚀 Space Blaster</h1>
+<p>Pfeiltasten = bewegen | Leertaste = schießen</p>
+
+<canvas id="game" width="400" height="500"></canvas>
+
+<script>
+const c = document.getElementById("game");
+const ctx = c.getContext("2d");
+
+let ship = {x:180,y:440};
+let bullets=[];
+let enemies=[];
+let score=0;
+let gameOver=false;
+
+let high = localStorage.getItem("spaceHigh") || 0;
+
+document.addEventListener("keydown",e=>{
+  if(gameOver && e.key=="Enter") location.reload();
+
+  if(e.key=="ArrowLeft") ship.x-=20;
+  if(e.key=="ArrowRight") ship.x+=20;
+  if(e.key==" ") bullets.push({x:ship.x+10,y:ship.y});
+});
+
+function spawnEnemy(){
+  if(!gameOver)
+    enemies.push({x:Math.random()*360,y:0});
+}
+setInterval(spawnEnemy,1000);
+
+function loop(){
+  ctx.clearRect(0,0,400,500);
+
+  // Schiff
+  ctx.fillStyle="lime";
+  ctx.fillRect(ship.x,ship.y,40,20);
+
+  // Kugeln
+  ctx.fillStyle="yellow";
+  bullets.forEach(b=>{
+    b.y-=8;
+    ctx.fillRect(b.x,b.y,5,10);
+  });
+
+  // Gegner
+  ctx.fillStyle="red";
+  enemies.forEach(e=>{
+    e.y+=3;
+    ctx.fillRect(e.x,e.y,30,20);
+
+    // Kollision Spieler
+    if(e.y>420 && e.x<ship.x+40 && e.x+30>ship.x){
+      endGame();
+    }
+  });
+
+  // Kollision Kugel → Gegner
+  bullets.forEach((b,bi)=>{
+    enemies.forEach((e,ei)=>{
+      if(b.x<e.x+30 && b.x+5>e.x && b.y<e.y+20 && b.y+10>e.y){
+        bullets.splice(bi,1);
+        enemies.splice(ei,1);
+        score++;
+      }
+    });
+  });
+
+  // HUD
+  ctx.fillStyle="white";
+  ctx.font="16px Arial";
+  ctx.fillText("Score: "+score,10,20);
+  ctx.fillText("High: "+high,300,20);
+
+  if(!gameOver) requestAnimationFrame(loop);
+  else drawGameOver();
+}
+
+function endGame(){
+  gameOver=true;
+  if(score>high){
+    high=score;
+    localStorage.setItem("spaceHigh",high);
+  }
+}
+
+function drawGameOver(){
+  ctx.fillStyle="white";
+  ctx.font="30px Arial";
+  ctx.fillText("GAME OVER",100,240);
+  ctx.font="16px Arial";
+  ctx.fillText("Score: "+score,150,280);
+  ctx.fillText("Highscore: "+high,120,310);
+  ctx.fillText("Drücke ENTER zum Neustart",70,350);
+}
+
+loop();
+</script>
+</body>
+</html>
