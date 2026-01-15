@@ -4,37 +4,58 @@
 <h2>Boss Arcade Login</h2>
 
 <input id="email" placeholder="Email">
-<input id="pass" type="password" placeholder="Passwort">
+<input id="pass" type="password" type="password">
 
+<!-- Buttons -->
 <button onclick="login()">Login</button>
 <button onclick="register()">Registrieren</button>
 
 <script>
-function register(){
- fetch("/register",{
-  method:"POST",
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({
-   email:email.value,
-   pass:pass.value
+function register() {
+  const email = document.getElementById("email").value;
+  const pass = document.getElementById("pass").value;
+
+  if(!email || !pass){
+    alert("Bitte Email und Passwort eingeben!");
+    return;
+  }
+
+  fetch("/register", {
+    method:"POST",
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ email, pass })
   })
- });
- alert("Registriert!");
+  .then(r => {
+    if(r.status === 200){
+      alert("Registrierung erfolgreich! Du kannst dich jetzt einloggen.");
+    } else {
+      r.text().then(t => alert("Fehler: "+t));
+    }
+  });
 }
 
-function login(){
- fetch("/login",{
-  method:"POST",
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({
-   email:email.value,
-   pass:pass.value
+function login() {
+  const email = document.getElementById("email").value;
+  const pass = document.getElementById("pass").value;
+
+  if(!email || !pass){
+    alert("Bitte Email und Passwort eingeben!");
+    return;
+  }
+
+  fetch("/login", {
+    method:"POST",
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ email, pass })
   })
- }).then(r=>r.text()).then(t=>{
-  localStorage.token=t;
-  location.href="index.html";
- });
+  .then(r => {
+    if(r.status === 200) return r.text();
+    else return r.text().then(t => { alert("Fehler: "+t); throw new Error(t); });
+  })
+  .then(token => {
+    localStorage.token = token;
+    location.href="index.html"; // Weiterleitung zur Spieleübersicht
+  })
+  .catch(e => console.log("Login abgebrochen"));
 }
 </script>
-</body>
-</html>
