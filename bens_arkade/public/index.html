@@ -1,24 +1,32 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>BossGames</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Boss Arcade</title>
 </head>
 <body>
-<h1>🎮 BossGames</h1>
+<script>
+// Prüfen, ob der User eingeloggt ist
+if(!localStorage.token){
+  location.href = "login.html";
+}
+</script>
 
-<div class="grid">
-  <div class="card" onclick="openGame('flappy')">
-    <img src="games/flappy/cover.png">
-    <p>Flappy Boss</p>
-  </div>
+<h1>🎮 Willkommen bei Boss Arcade!</h1>
+<p>Hier sind deine Spiele:</p>
+<ul>
+  <li><a href="games/flappy/index.html">Flappy Boss</a></li>
+  <li><a href="games/runner/index.html">Pixel Runner</a></li>
+</ul>
 
-  <div class="card" onclick="openGame('runner')">
-    <img src="games/runner/cover.png">
-    <p>Pixel Runner</p>
-  </div>
-</div>
+<!-- 🔥 Logout-Button -->
+<button onclick="logout()">Logout</button>
 
-<script src="main.js"></script>
+<script>
+function logout(){
+  localStorage.removeItem("token"); // Token löschen
+  location.href="login.html";       // Zurück zur Login-Seite
+}
+</script>
+
 </body>
 </html>

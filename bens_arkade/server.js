@@ -48,3 +48,21 @@ app.post("/score",(req,res)=>{
 });
 
 app.listen(3000, ()=>console.log("Boss Arcade läuft auf Port 3000"));
+
+app.post("/login", (req,res)=>{
+  const {email, pass} = req.body;
+  db.get("SELECT * FROM users WHERE email=?",[email], (err,user)=>{
+    if(!user) return res.status(401).send("Falsche Zugangsdaten!");
+    
+    bcrypt.compare(pass, user.pass, (err,result)=>{
+      if(result) {
+        // ✅ Zugang OK
+        const token = jwt.sign({id:user.id}, "bosskey");
+        res.send(token);
+      } else {
+        // ❌ Zugang falsch
+        res.status(401).send("Falsche Zugangsdaten!");
+      }
+    });
+  });
+});
