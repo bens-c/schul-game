@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<body>
+<iframe id="game" frameborder="0"></iframe>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+document.getElementById("game").src =
+"games/" + params.get("g") + "/index.html";
+</script>
+</body>
+</html>

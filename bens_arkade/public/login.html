@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h2>Boss Arcade Login</h2>
+
+<input id="email" placeholder="Email">
+<input id="pass" type="password" placeholder="Passwort">
+
+<button onclick="login()">Login</button>
+<button onclick="register()">Registrieren</button>
+
+<script>
+function register(){
+ fetch("/register",{
+  method:"POST",
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({
+   email:email.value,
+   pass:pass.value
+  })
+ });
+ alert("Registriert!");
+}
+
+function login(){
+ fetch("/login",{
+  method:"POST",
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({
+   email:email.value,
+   pass:pass.value
+  })
+ }).then(r=>r.text()).then(t=>{
+  localStorage.token=t;
+  location.href="/";
+ });
+}
+</script>
+</body>
+</html>
