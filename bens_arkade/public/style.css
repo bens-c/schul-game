@@ -5,3 +5,6 @@ html {
 .button {
     color: midnightblue;
 }
+a {
+    font-family: 'Courier New', Courier, monospace;
+}
