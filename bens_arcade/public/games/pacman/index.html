@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Boss-Man</title>
+<style>
+body{
+  background:black;
+  color:white;
+  text-align:center;
+  font-family:Arial;
+}
+canvas{
+  background:#000;
+  display:block;
+  margin:auto;
+  
+}
+
+</style>
+</head>
+<body>
+
+  
+<h1>🟡 Boss-Man</h1>
+<button onclick="window.location.href='../index.html'">Zurück</button>
+<p>Pfeiltasten = bewegen</p>
+
+<canvas id="game" width="420" height="420"></canvas>
+<br>
+
+<script>
+const c = document.getElementById("game");
+const ctx = c.getContext("2d");
+
+const size = 20;
+let map = [
+"#####################",
+"#........#........#.#",
+"#.####.#.#.#.####.#.#",
+"#...................#",
+"#.####.#.#####.#.###.#",
+"#......#....#......#",
+"#####################"
+];
+
+let player = {x:1,y:1,dx:0,dy:0};
+let score = 0;
+let high = localStorage.getItem("bossmanHigh") || 0;
+
+document.addEventListener("keydown",e=>{
+  if(e.key=="ArrowUp")    {player.dx=0;player.dy=-1;}
+  if(e.key=="ArrowDown")  {player.dx=0;player.dy=1;}
+  if(e.key=="ArrowLeft")  {player.dx=-1;player.dy=0;}
+  if(e.key=="ArrowRight") {player.dx=1;player.dy=0;}
+});
+
+function draw(){
+  ctx.clearRect(0,0,c.width,c.height);
+
+  map.forEach((row,y)=>{
+    [...row].forEach((cell,x)=>{
+      if(cell=="#"){
+        ctx.fillStyle="blue";
+        ctx.fillRect(x*size,y*size,size,size);
+      }
+      if(cell=="."){
+        ctx.fillStyle="white";
+        ctx.beginPath();
+        ctx.arc(x*size+10,y*size+10,3,0,Math.PI*2);
+        ctx.fill();
+      }
+    });
+  });
+
+  // Spieler
+  ctx.fillStyle="yellow";
+  ctx.beginPath();
+  ctx.arc(player.x*size+10,player.y*size+10,9,0,Math.PI*2);
+  ctx.fill();
+
+  // HUD
+  ctx.fillStyle="white";
+  ctx.font="14px Arial";
+  ctx.fillText("Score: "+score,10,410);
+  ctx.fillText("High: "+high,320,410);
+}
+
+function move(){
+  let nx = player.x + player.dx;
+  let ny = player.y + player.dy;
+
+  if(map[ny][nx] !== "#"){
+    player.x = nx;
+    player.y = ny;
+
+    if(map[ny][nx] == "."){
+      score++;
+      map[ny] = map[ny].substring(0,nx)+" "+map[ny].substring(nx+1);
+
+      if(score > high){
+        high = score;
+        localStorage.setItem("bossmanHigh", high);
+      }
+    }
+  }
+}
+
+function loop(){
+  move();
+  draw();
+  setTimeout(loop,150);
+}
+loop();
+</script>
+
+
+</body>
+</html>
