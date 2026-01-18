@@ -77,27 +77,20 @@ let cameraY = 0;
 
 function initEnemies() {
   enemies = [
-    {x:15,y:5,dx:-1,dy:0},
+    {x:15,y:2,dx:-1,dy:0},
     {x:18,y:4,dx:1,dy:0},
-    {x:2,y:5,dx:0,dy:1},
-    {x:19,y:1,dx:-1,dy:0},
-    {x:1,y:6,dx:1,dy:0},
-    {x:17,y:6,dx:0,dy:-1},
-    {x:3,y:2,dx:1,dy:0},
-    {x:16,y:3,dx:-1,dy:0},
-    {x:4,y:6,dx:0,dy:1},
-    {x:14,y:2,dx:1,dy:0},
-    {x:18,y:6,dx:1,dy:0}
+    {x:16,y:5,dx:0,dy:1},
+    {x:19,y:1,dx:-1,dy:0}
   ];
 }
 initEnemies();
 
 document.addEventListener("keydown",e=>{
-  if(e.key=="ArrowUp")    {player.dx=0;player.dy=-1;}
-  if(e.key=="ArrowDown")  {player.dx=0;player.dy=1;}
+  if(e.key=="ArrowUp" || e.key=="w" || e.key=="W")    {player.dx=0;player.dy=-1;}
+  if(e.key=="ArrowDown" || e.key=="s" || e.key=="S")  {player.dx=0;player.dy=1;}
   if(e.key=="ArrowLeft")  {player.dx=-1;player.dy=0;}
   if(e.key=="ArrowRight") {player.dx=1;player.dy=0;}
-  if(e.key=="r" || e.key=="R") {restart();}
+  if(e.key=="r" || e.key=="R" || e.key==" ") {restart();}
 });
 
 document.getElementById("backBtn").addEventListener("click", () => {
@@ -235,7 +228,7 @@ function move(){
     if(player.x === enemies[i].x && player.y === enemies[i].y){
       if(powerUpActive){
         score += 50;
-        enemies[i].x = 1 + Math.floor(Math.random() * 18);
+        enemies[i].x = 10 + Math.floor(Math.random() * 10);
         enemies[i].y = 1 + Math.floor(Math.random() * 5);
       } else {
         gameOver = true;
@@ -307,7 +300,6 @@ function moveEnemyTowardPlayer(enemy){
     for(let dir of directions){
       let nx = current.x + dir.dx;
       let ny = current.y + dir.dy;
-      
       if(ny >= 0 && ny < MAP_HEIGHT && nx >= 0 && nx < MAP_WIDTH && map[ny][nx] !== "#"){
         let newKey = nx + "," + ny;
         if(!visited.has(newKey)){
@@ -339,22 +331,24 @@ function moveEnemyTowardPlayer(enemy){
 function spawnPowerUp(){
   let x, y;
   let validSpot = false;
-  
-  while(!validSpot){
+  let attempts = 0;
+  while(!validSpot && attempts < 100){
     x = Math.floor(Math.random() * MAP_WIDTH);
     y = Math.floor(Math.random() * MAP_HEIGHT);
-    if(map[y] && map[y][x] !== "#" && (x !== player.x || y !== player.y) && (x !== enemy.x || y !== enemy.y)){
+    let onEnemy = enemies.some(e => e.x === x && e.y === y);
+    if(map[y] && map[y][x] !== "#" && !(x === player.x && y === player.y) && !onEnemy){
       validSpot = true;
     }
+    attempts++;
   }
-  
-  powerUp = {x, y};
+  if(validSpot){
+    powerUp = {x, y};
+  }
 }
 
 function restart(){
   // Map regenerieren
   map = generateMap();
-  
   // Spieler zurücksetzen
   player = {x:1,y:1,dx:0,dy:0};
   initEnemies();
@@ -374,7 +368,5 @@ function loop(){
 }
 loop();
 </script>
-
-
 </body>
 </html>
