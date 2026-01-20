@@ -86,3 +86,36 @@ app.post("/login", (req, res) => {
     });
   });
 });
+
+const wss = new WebSocket.Server({ port: 3001 });
+
+let players = {};
+
+wss.on("connection", ws => {
+  const id = Math.random().toString(36).substr(2,9);
+  players[id] = {x:100,y:100};
+
+  ws.send(JSON.stringify({type:"init",id,players}));
+
+  ws.on("message", msg => {
+    const data = JSON.parse(msg);
+    if(data.type==="move"){
+      players[id] = data.pos;
+    }
+    broadcast();
+  });
+
+  ws.on("close", ()=>{
+    delete players[id];
+    broadcast();
+  });
+});
+
+function broadcast(){
+  const data = JSON.stringify({type:"update",players});
+  wss.clients.forEach(c=>{
+    if(c.readyState===1) c.send(data);
+  });
+}
+
+console.log("🟢 Multiplayer WebSocket läuft auf Port 3001");
