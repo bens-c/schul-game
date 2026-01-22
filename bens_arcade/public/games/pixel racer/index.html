@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Pixel Racer</title>
+<style>
+body{
+  background:#111;
+  color:white;
+  text-align:center;
+  font-family:Arial;
+}
+canvas{
+  background:#333;
+  display:block;
+  margin:auto;
+  border:2px solid #0f0;
+}
+button{
+  margin-top:10px;
+  padding:6px 12px;
+}
+</style>
+</head>
+<body>
+
+<h1>🏎️ Pixel Racer</h1>
+<p>← → bewegen | Ausweichen!</p>
+
+<canvas id="game" width="300" height="500"></canvas>
+
+<button onclick="location.href='../../index.html'">⬅ Zurück zur Arcade</button>
+
+<script>
+const c = document.getElementById("game");
+const ctx = c.getContext("2d");
+
+let car = {x:130,y:420};
+let enemies=[];
+let score=0;
+let gameOver=false;
+
+let high = localStorage.getItem("racerHigh") || 0;
+
+document.addEventListener("keydown",e=>{
+  if(e.key=="ArrowLeft") car.x-=30;
+  if(e.key=="ArrowRight") car.x+=30;
+  if(gameOver && e.key=="Enter") location.reload();
+});
+
+function spawn(){
+  enemies.push({x:Math.random()*240,y:-40});
+}
+setInterval(spawn,900);
+
+function loop(){
+  ctx.clearRect(0,0,300,500);
+
+  // Straße
+  ctx.fillStyle="#555";
+  ctx.fillRect(50,0,200,500);
+
+  // Auto
+  ctx.fillStyle="lime";
+  ctx.fillRect(car.x,car.y,30,50);
+
+  // Gegner
+  ctx.fillStyle="red";
+  enemies.forEach(e=>{
+    e.y+=5;
+    ctx.fillRect(e.x,e.y,30,50);
+
+    // Kollision
+    if(
+      e.x < car.x+30 &&
+      e.x+30 > car.x &&
+      e.y < car.y+50 &&
+      e.y+50 > car.y
+    ){
+      endGame();
+    }
+  });
+
+  // Punkte
+  score++;
+  ctx.fillStyle="white";
+  ctx.fillText("Score: "+score,10,20);
+  ctx.fillText("High: "+high,200,20);
+
+  if(!gameOver) requestAnimationFrame(loop);
+  else drawGameOver();
+}
+
+function endGame(){
+  gameOver=true;
+  if(score>high){
+    high=score;
+    localStorage.setItem("racerHigh",high);
+  }
+}
+
+function drawGameOver(){
+  ctx.fillStyle="white";
+  ctx.font="24px Arial";
+  ctx.fillText("GAME OVER",70,240);
+  ctx.font="14px Arial";
+  ctx.fillText("ENTER = Neustart",80,270);
+}
+
+loop();
+</script>
+
+</body>
+</html>

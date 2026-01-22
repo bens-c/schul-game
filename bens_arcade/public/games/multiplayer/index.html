@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Multiplayer Arena</title>
+<style>
+body{background:#111;color:white;text-align:center;font-family:Arial}
+canvas{background:#000;margin:auto;display:block}
+</style>
+</head>
+<body>
+
+<h1>🌐 Multiplayer Arena</h1>
+<p>Pfeiltasten bewegen dich</p>
+
+<canvas id="game" width="400" height="400"></canvas>
+
+<button onclick="location.href='../../index.html'">⬅ Zurück</button>
+
+<script>
+const c = document.getElementById("game");
+const ctx = c.getContext("2d");
+
+let id=null;
+let players={};
+let me={x:200,y:200};
+
+const ws = new WebSocket("wss://"+location.host.replace(":3000","")+":3001");
+
+ws.onmessage = e=>{
+  const data = JSON.parse(e.data);
+  if(data.type==="init"){
+    id=data.id;
+    players=data.players;
+  }
+  if(data.type==="update"){
+    players=data.players;
+  }
+};
+
+document.addEventListener("keydown",e=>{
+  if(e.key=="ArrowUp") me.y-=10;
+  if(e.key=="ArrowDown") me.y+=10;
+  if(e.key=="ArrowLeft") me.x-=10;
+  if(e.key=="ArrowRight") me.x+=10;
+
+  ws.send(JSON.stringify({type:"move",pos:me}));
+});
+
+function loop(){
+  ctx.clearRect(0,0,400,400);
+
+  for(let pid in players){
+    ctx.fillStyle = pid===id ? "lime" : "red";
+    ctx.fillRect(players[pid].x,players[pid].y,20,20);
+  }
+
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+
+</body>
+</html>

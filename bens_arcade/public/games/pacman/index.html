@@ -24,6 +24,7 @@ canvas{
   
 <h1>🟡 Boss-Man</h1>
 <button id="backBtn">← Zurück</button>
+<button id="restartBtn" style="display:none;">🔄 Neues Spiel</button>
 <canvas id="c"></canvas>
 <p>Pfeiltasten = bewegen</p>
 
@@ -35,63 +36,161 @@ const c = document.getElementById("game");
 const ctx = c.getContext("2d");
 
 const size = 20;
-let map = [
+let mapBase = [
 "#####################",
 "#........#........#.#",
 "#.####.#.#.#.####.#.#",
 "#...................#",
 "#.####.#.#####.#.###.#",
 "#......#....#......#",
-"#####################"
+"#...........#.......#"
 ];
 
+// Generiere eine riesige verbundene Map
+function generateMap() {
+  let fullMap = [];
+  for(let i = 0; i < 50; i++) {
+    let mapCopy = JSON.parse(JSON.stringify(mapBase));
+    // Ändere die erste Reihe um Verbindungen zu schaffen
+    if(i > 0) {
+      mapCopy[0] = "#.......#........#.#";
+    }
+    fullMap = fullMap.concat(mapCopy);
+  }
+  return fullMap;
+}
+
+let map = generateMap();
+const MAP_HEIGHT = map.length;
+const MAP_WIDTH = map[0].length;
+
 let player = {x:1,y:1,dx:0,dy:0};
+let enemies = [];
+let powerUp = null;
+let powerUpActive = false;
+let powerUpTimer = 0;
 let score = 0;
 let high = localStorage.getItem("bossmanHigh") || 0;
+let gameOver = false;
+let cameraX = 0;
+let cameraY = 0;
+
+function initEnemies() {
+  enemies = [
+    {x:15,y:2,dx:-1,dy:0},
+    {x:18,y:4,dx:1,dy:0},
+    {x:16,y:5,dx:0,dy:1},
+    {x:19,y:1,dx:-1,dy:0}
+  ];
+}
+initEnemies();
 
 document.addEventListener("keydown",e=>{
-  if(e.key=="ArrowUp")    {player.dx=0;player.dy=-1;}
-  if(e.key=="ArrowDown")  {player.dx=0;player.dy=1;}
+  if(e.key=="ArrowUp" || e.key=="w" || e.key=="W")    {player.dx=0;player.dy=-1;}
+  if(e.key=="ArrowDown" || e.key=="s" || e.key=="S")  {player.dx=0;player.dy=1;}
   if(e.key=="ArrowLeft")  {player.dx=-1;player.dy=0;}
   if(e.key=="ArrowRight") {player.dx=1;player.dy=0;}
+  if(e.key=="r" || e.key=="R" || e.key==" ") {restart();}
 });
+
+document.getElementById("backBtn").addEventListener("click", () => {
+  window.location.href = "../../../index.html";
+});
+
+document.getElementById("restartBtn").addEventListener("click", restart);
 
 function draw(){
   ctx.clearRect(0,0,c.width,c.height);
 
-  map.forEach((row,y)=>{
-    [...row].forEach((cell,x)=>{
-      if(cell=="#"){
-        ctx.fillStyle="blue";
-        ctx.fillRect(x*size,y*size,size,size);
+  // Kamera dem Spieler folgen
+  cameraX = player.x * size - c.width/2;
+  cameraY = player.y * size - c.height/2;
+
+  // Kamera begrenzen
+  cameraX = Math.max(0, Math.min(cameraX, MAP_WIDTH * size - c.width));
+  cameraY = Math.max(0, Math.min(cameraY, MAP_HEIGHT * size - c.height));
+
+  // Karte zeichnen mit Kamera-Offset
+  for(let y = 0; y < map.length; y++){
+    for(let x = 0; x < map[y].length; x++){
+      let cell = map[y][x];
+      let screenX = x * size - cameraX;
+      let screenY = y * size - cameraY;
+      
+      if(screenX + size > 0 && screenX < c.width && screenY + size > 0 && screenY < c.height){
+        if(cell === "#"){
+          ctx.fillStyle="blue";
+          ctx.fillRect(screenX, screenY, size, size);
+        }
+        if(cell === "."){
+          ctx.fillStyle="white";
+          ctx.beginPath();
+          ctx.arc(screenX + 10, screenY + 10, 3, 0, Math.PI*2);
+          ctx.fill();
+        }
       }
-      if(cell=="."){
-        ctx.fillStyle="white";
-        ctx.beginPath();
-        ctx.arc(x*size+10,y*size+10,3,0,Math.PI*2);
-        ctx.fill();
-      }
-    });
-  });
+    }
+  }
 
   // Spieler
-  ctx.fillStyle="yellow";
+  let playerScreenX = player.x * size - cameraX;
+  let playerScreenY = player.y * size - cameraY;
+  ctx.fillStyle=powerUpActive?"lime":"yellow";
   ctx.beginPath();
-  ctx.arc(player.x*size+10,player.y*size+10,9,0,Math.PI*2);
+  ctx.arc(playerScreenX + 10, playerScreenY + 10, 9, 0, Math.PI*2);
   ctx.fill();
+
+  // Gegner
+  for(let enemy of enemies){
+    let enemyScreenX = enemy.x * size - cameraX;
+    let enemyScreenY = enemy.y * size - cameraY;
+    ctx.fillStyle="red";
+    ctx.beginPath();
+    ctx.arc(enemyScreenX + 10, enemyScreenY + 10, 9, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Power-Up
+  if(powerUp){
+    let powerUpScreenX = powerUp.x * size - cameraX;
+    let powerUpScreenY = powerUp.y * size - cameraY;
+    ctx.fillStyle=powerUpActive?"lime":"orange";
+    ctx.beginPath();
+    ctx.arc(powerUpScreenX + 10, powerUpScreenY + 10, 6, 0, Math.PI*2);
+    ctx.fill();
+  }
 
   // HUD
   ctx.fillStyle="white";
   ctx.font="14px Arial";
   ctx.fillText("Score: "+score,10,410);
   ctx.fillText("High: "+high,320,410);
+  
+  if(powerUpActive){
+    ctx.fillStyle="lime";
+    ctx.fillText("POWER: "+(5-Math.floor(powerUpTimer/30)),150,410);
+  }
+
+  if(gameOver){
+    ctx.fillStyle="rgba(0,0,0,0.7)";
+    ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle="red";
+    ctx.font="30px Arial";
+    ctx.fillText("GAME OVER!",100,200);
+    
+    document.getElementById("restartBtn").style.display="block";
+  } else {
+    document.getElementById("restartBtn").style.display="none";
+  }
 }
 
 function move(){
+  if(gameOver) return;
+
   let nx = player.x + player.dx;
   let ny = player.y + player.dy;
 
-  if(map[ny][nx] !== "#"){
+  if(ny >= 0 && ny < MAP_HEIGHT && nx >= 0 && nx < MAP_WIDTH && map[ny][nx] !== "#"){
     player.x = nx;
     player.y = ny;
 
@@ -105,6 +204,161 @@ function move(){
       }
     }
   }
+
+  // Power-Up sammeln
+  if(powerUp && player.x === powerUp.x && player.y === powerUp.y){
+    powerUpActive = true;
+    powerUpTimer = 150;
+    powerUp = null;
+  }
+
+  // Power-Up Timer
+  if(powerUpActive){
+    powerUpTimer--;
+    if(powerUpTimer <= 0){
+      powerUpActive = false;
+    }
+  }
+
+  // Gegner bewegen sich und verfolgen Spieler
+  for(let i = 0; i < enemies.length; i++){
+    moveEnemyTowardPlayer(enemies[i]);
+    
+    // Kollisionsprüfung
+    if(player.x === enemies[i].x && player.y === enemies[i].y){
+      if(powerUpActive){
+        score += 50;
+        enemies[i].x = 10 + Math.floor(Math.random() * 10);
+        enemies[i].y = 1 + Math.floor(Math.random() * 5);
+      } else {
+        gameOver = true;
+      }
+    }
+  }
+
+  // Power-Up spawnen wenn keins existiert
+  if(!powerUp && Math.random() < 0.02){
+    spawnPowerUp();
+  }
+}
+
+function moveEnemy(){
+  let directions = [
+    {dx:-1, dy:0},
+    {dx:1, dy:0},
+    {dx:0, dy:-1},
+    {dx:0, dy:1}
+  ];
+
+  const mapWidth = map[0].length;
+  const mapHeight = map.length;
+
+  let validMoves = directions.filter(dir => {
+    let nx = ((enemy.x + dir.dx) % mapWidth + mapWidth) % mapWidth;
+    let ny = ((enemy.y + dir.dy) % mapHeight + mapHeight) % mapHeight;
+    return map[ny][nx] !== "#";
+  });
+
+  if(validMoves.length > 0){
+    let move = validMoves[Math.floor(Math.random() * validMoves.length)];
+    enemy.x = ((enemy.x + move.dx) % mapWidth + mapWidth) % mapWidth;
+    enemy.y = ((enemy.y + move.dy) % mapHeight + mapHeight) % mapHeight;
+  }
+}
+
+function moveEnemyTowardPlayer(enemy){
+  // BFS Pathfinding
+  let visited = new Set();
+  let queue = [{x: enemy.x, y: enemy.y, path: []}];
+  let searchRadius = 12;
+
+  while(queue.length > 0){
+    let current = queue.shift();
+    let key = current.x + "," + current.y;
+
+    if(visited.has(key)) continue;
+    visited.add(key);
+
+    if(current.x === player.x && current.y === player.y){
+      if(current.path.length > 0){
+        let nextStep = current.path[0];
+        enemy.x = nextStep.x;
+        enemy.y = nextStep.y;
+      }
+      return;
+    }
+
+    if(visited.size > searchRadius * searchRadius) break;
+
+    let directions = [
+      {dx:1, dy:0},
+      {dx:-1, dy:0},
+      {dx:0, dy:1},
+      {dx:0, dy:-1}
+    ];
+
+    for(let dir of directions){
+      let nx = current.x + dir.dx;
+      let ny = current.y + dir.dy;
+      if(ny >= 0 && ny < MAP_HEIGHT && nx >= 0 && nx < MAP_WIDTH && map[ny][nx] !== "#"){
+        let newKey = nx + "," + ny;
+        if(!visited.has(newKey)){
+          queue.push({
+            x: nx,
+            y: ny,
+            path: [...current.path, {x: nx, y: ny}]
+          });
+        }
+      }
+    }
+  }
+
+  // Fallback: zufällige Bewegung wenn kein Pfad gefunden
+  let directions = [{dx:1, dy:0},{dx:-1, dy:0},{dx:0, dy:1},{dx:0, dy:-1}];
+  let validMoves = directions.filter(dir => {
+    let nx = enemy.x + dir.dx;
+    let ny = enemy.y + dir.dy;
+    return ny >= 0 && ny < MAP_HEIGHT && nx >= 0 && nx < MAP_WIDTH && map[ny][nx] !== "#";
+  });
+
+  if(validMoves.length > 0){
+    let move = validMoves[Math.floor(Math.random() * validMoves.length)];
+    enemy.x += move.dx;
+    enemy.y += move.dy;
+  }
+}
+
+function spawnPowerUp(){
+  let x, y;
+  let validSpot = false;
+  let attempts = 0;
+  while(!validSpot && attempts < 100){
+    x = Math.floor(Math.random() * MAP_WIDTH);
+    y = Math.floor(Math.random() * MAP_HEIGHT);
+    let onEnemy = enemies.some(e => e.x === x && e.y === y);
+    if(map[y] && map[y][x] !== "#" && !(x === player.x && y === player.y) && !onEnemy){
+      validSpot = true;
+    }
+    attempts++;
+  }
+  if(validSpot){
+    powerUp = {x, y};
+  }
+}
+
+function restart(){
+  // Map regenerieren
+  map = generateMap();
+  // Spieler zurücksetzen
+  player = {x:1,y:1,dx:0,dy:0};
+  initEnemies();
+  powerUp = null;
+  powerUpActive = false;
+  powerUpTimer = 0;
+  score = 0;
+  gameOver = false;
+  cameraX = 0;
+  cameraY = 0;
 }
 
 function loop(){
@@ -114,7 +368,5 @@ function loop(){
 }
 loop();
 </script>
-
-
 </body>
 </html>
