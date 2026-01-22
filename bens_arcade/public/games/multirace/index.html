@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Multiplayer Rennen</title>
+<style>
+body{background:#111;color:white;font-family:Arial;text-align:center}
+canvas{background:#333;display:block;margin:auto}
+#chat{height:120px;overflow:auto;border:1px solid #555;margin:5px;padding:5px}
+</style>
+</head>
+<body>
+
+<h1>🏁 Multiplayer Rennen</h1>
+
+<div id="login">
+  <input id="name" placeholder="Dein Name">
+  <button onclick="join()">Lobby beitreten</button>
+</div>
+
+<div id="game" style="display:none">
+  <canvas id="c" width="300" height="500"></canvas>
+
+  <div id="chat"></div>
+  <input id="msg" placeholder="Chat..." onkeydown="sendChat(event)">
+</div>
+
+<button onclick="goBack()">⬅ Zurück</button>
+
+<script>
+function goBack(){
+  fetch("/leave", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ game: "Multiplayer Rennen" })
+});
+}
+</script>
+
+
+<script>
+const ws = new WebSocket(
+  (location.protocol==="https:"?"wss":"ws")+"://"+location.host
+);
+
+ws.onopen = () => {
+  console.log("✅ WebSocket verbunden");
+};
+
+ws.onerror = e => {
+  console.error("❌ WebSocket Fehler", e);
+};
+
+ws.onclose = () => {
+  console.log("❌ WebSocket geschlossen");
+};
+
+const c = document.getElementById("c");
+const ctx = c.getContext("2d");
+
+let me = {x:130,y:420};
+let players = {};
+
+function join(){
+  const n = document.getElementById("name").value;
+  if(!n) return alert("Name eingeben!");
+  ws.send(JSON.stringify({type:"join",name:n}));
+  document.getElementById("login").style.display="none";
+  document.getElementById("game").style.display="block";
+}
+
+ws.onmessage = e=>{
+  const d = JSON.parse(e.data);
+
+  if(d.type==="players") players=d.players;
+
+  if(d.type==="chat"){
+    const chat=document.getElementById("chat");
+    chat.innerHTML += `<div><b>${d.name}:</b> ${d.text}</div>`;
+    chat.scrollTop=9999;
+  }
+};
+
+document.addEventListener("keydown",e=>{
+  if(e.key=="ArrowUp") me.y-=10;
+  if(e.key=="ArrowDown") me.y+=10;
+  if(e.key=="ArrowLeft") me.x-=10;
+  if(e.key=="ArrowRight") me.x+=10;
+
+  ws.send(JSON.stringify({type:"move",x:me.x,y:me.y}));
+});
+
+function sendChat(e){
+  if(e.key==="Enter"){
+    ws.send(JSON.stringify({
+      type:"chat",
+      text:e.target.value
+    }));
+    e.target.value="";
+  }
+}
+
+function loop(){
+  ctx.clearRect(0,0,300,500);
+
+  // Straße
+  ctx.fillStyle="#555";
+  ctx.fillRect(50,0,200,500);
+
+  for(let id in players){
+    let p=players[id];
+    ctx.fillStyle="red";
+    ctx.fillRect(p.x,p.y,30,50);
+    ctx.fillStyle="white";
+    ctx.fillText(p.name,p.x,p.y-5);
+  }
+
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+
+</body>
+</html>

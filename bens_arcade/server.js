@@ -51,6 +51,13 @@ app.post("/score",(req,res)=>{
 app.post("/register", (req, res) => {
   const { email, pass } = req.body;
 
+  app.post("/leave", (req, res) => {
+  console.log("⬅ Spieler hat ein Spiel verlassen");
+  res.sendStatus(200);
+  res.send("Spiel verlassen");
+});
+
+
   if(!email || !pass) return res.status(400).send("Email und Passwort erforderlich");
 
   bcrypt.hash(pass, 10, (err, hash) => {
@@ -66,7 +73,7 @@ app.post("/register", (req, res) => {
   });
 });
 
-app.listen(3000, ()=>console.log("Boss Arcade läuft auf Port 3000"));
+
 
 app.post("/login", (req, res) => {
   const { email, pass } = req.body;
@@ -85,4 +92,54 @@ app.post("/login", (req, res) => {
       res.status(200).send(token);
     });
   });
+});
+
+const http = require("http");
+
+const server = http.createServer(app); // app = dein express()
+
+const wss = new WebSocket.Server({ server });
+
+let players = {};
+
+wss.on("connection", ws => {
+  console.log("🟢 Client verbunden");
+  const id = Math.random().toString(36).slice(2);
+
+  ws.on("message", msg => {
+    const data = JSON.parse(msg);
+
+    if(data.type==="join"){
+      console.log("👤 JOIN:", data.name);
+      players[id] = { name:data.name, x:130, y:420 };
+      sendAll({type:"players",players});
+    }
+
+    if(data.type==="move" && players[id]){
+      players[id].x = data.x;
+      players[id].y = data.y;
+      sendAll({type:"players",players});
+    }
+
+    if(data.type==="chat"){
+      sendAll({type:"chat",name:players[id]?.name,text:data.text});
+    }
+  });
+
+  ws.on("close",()=>{
+    delete players[id];
+    sendAll({type:"players",players});
+  });
+});
+
+function sendAll(data){
+  wss.clients.forEach(c=>{
+    if(c.readyState===1){
+      c.send(JSON.stringify(data));
+    }
+  });
+}
+
+server.listen(3000,()=>{
+  console.log("🟢 Server + WebSocket auf Port 3000", "Boss Arcade läuft auf Port 3000");
 });
