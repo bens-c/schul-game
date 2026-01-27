@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <link rel="stylesheet" href="style.css">
+    <div class="login-container">
+        <h2>Boss Arcade Login</h2>
+
+        <input class="textHold" id="email" placeholder="Email">
+        <input id="pass" type="password" placeholder="Passwort">
+
+        <button class="button" onclick="login()">Login</button>
+        <button class="button" onclick="register()">Registrieren</button>
+    </div>
+
+<script>
+function register(){
+ fetch("/register",{
+  method:"POST",
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({
+   email:email.value,
+   pass:pass.value
+  })
+ }).then(r=>{
+  if(r.ok){
+   alert("Registriert!");
+  }else{
+   alert("Fehler: " + r.statusText);
+  }
+ });
+}
+
+function login(){
+ fetch("/login",{
+  method:"POST",
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({
+   email:email.value,
+   pass:pass.value
+  })
+ }).then(r=>{
+  if(r.ok){
+   return r.text();
+  }else{
+   throw new Error("Fehler: " + r.statusText);
+  }
+ }).then(t=>{
+  localStorage.token=t;
+  location.href="index.html";
+ }).catch(e=>{
+  alert(e.message);
+ });
+}
+</script>
+</body>
+</html>
