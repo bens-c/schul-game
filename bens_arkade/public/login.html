@@ -21,8 +21,13 @@ function register(){
    email:email.value,
    pass:pass.value
   })
+ }).then(r=>{
+  if(r.ok){
+   alert("Registriert!");
+  }else{
+   alert("Fehler: " + r.statusText);
+  }
  });
- alert("Registriert!");
 }
 
 function login(){
@@ -33,9 +38,17 @@ function login(){
    email:email.value,
    pass:pass.value
   })
- }).then(r=>r.text()).then(t=>{
+ }).then(r=>{
+  if(r.ok){
+   return r.text();
+  }else{
+   throw new Error("Fehler: " + r.statusText);
+  }
+ }).then(t=>{
   localStorage.token=t;
   location.href="index.html";
+ }).catch(e=>{
+  alert(e.message);
  });
 }
 </script>
