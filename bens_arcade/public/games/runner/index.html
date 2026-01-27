@@ -18,14 +18,32 @@
   #backBtn:hover {
     background: rgba(0,0,0,0.9);
   }
+  #pauseBtn {
+    position: fixed;
+    top: 10px;
+    left: 110px;
+    padding: 10px 15px;
+    font-size: 16px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    z-index: 10;
+  }
+  #pauseBtn:hover {
+    background: rgba(0,0,0,0.9);
+  }
 </style>
 <button id="backBtn">← Zurück</button>
+<button id="pauseBtn" onclick="togglePause()">⏸ Pause</button>
 <canvas id="c"></canvas>
 <script>
 let playerX, playerY, score = 0;
 const c = document.getElementById("c"), ctx = c.getContext("2d");
 let obstacles = [];
 let gameRunning = true;
+let isPaused = false;
 let level = 1;
 let obstacleSpeed = 4;
 let spawnRate = 0.02;
@@ -44,6 +62,11 @@ window.addEventListener('resize', resizeCanvas);
 const keys = {};
 document.addEventListener('keydown', (e) => keys[e.key] = true);
 document.addEventListener('keyup', (e) => keys[e.key] = false);
+
+function togglePause() {
+  isPaused = !isPaused;
+  document.getElementById('pauseBtn').textContent = isPaused ? '▶ Fortsetzen' : '⏸ Pause';
+}
 
 function spawnObstacle() {
   const width = Math.random() * 40 + 30;
@@ -136,7 +159,7 @@ function draw() {
 }
 
 function gameLoop() {
-  if(gameRunning) {
+  if(gameRunning && !isPaused) {
     update();
   }
   draw();

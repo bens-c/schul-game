@@ -19,25 +19,32 @@ canvas{background:#333;display:block;margin:auto}
 
 <div id="game" style="display:none">
   <canvas id="c" width="300" height="500"></canvas>
+  <div id="hud">💰 Geld: 0</div>
+
 
   <div id="chat"></div>
   <input id="msg" placeholder="Chat..." onkeydown="sendChat(event)">
 </div>
+<h3>🛒 Shop</h3>
+<button onclick="buySpeed()">⚡ Speed +1 (50💰)</button>
+<button onclick="buySkin()">🎨 Neues Auto (100💰)</button>
+<button onclick="buy()">💎 Spezial (10000💰)</button>
+
 
 <button onclick="goBack()">⬅ Zurück</button>
 
 <script>
 function goBack(){
-  fetch("/leave", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({ game: "Multiplayer Rennen" })
-});
+  location.href = '../../index.html';
 }
 </script>
 
 
 <script>
+
+  let money = 0;
+  let speed = 1;
+
 const ws = new WebSocket(
   (location.protocol==="https:"?"wss":"ws")+"://"+location.host
 );
@@ -59,6 +66,7 @@ const ctx = c.getContext("2d");
 
 let me = {x:130,y:420};
 let players = {};
+let cameraY = 0;
 
 function join(){
   const n = document.getElementById("name").value;
@@ -77,16 +85,17 @@ ws.onmessage = e=>{
     const chat=document.getElementById("chat");
     chat.innerHTML += `<div><b>${d.name}:</b> ${d.text}</div>`;
     chat.scrollTop=9999;
+    
   }
 };
 
 document.addEventListener("keydown",e=>{
-  if(e.key=="ArrowUp") me.y-=10;
-  if(e.key=="ArrowDown") me.y+=10;
+  if(e.key=="ArrowUp") cameraY+=10;
+  if(e.key=="ArrowDown") cameraY-=10;
   if(e.key=="ArrowLeft") me.x-=10;
   if(e.key=="ArrowRight") me.x+=10;
 
-  ws.send(JSON.stringify({type:"move",x:me.x,y:me.y}));
+  ws.send(JSON.stringify({type:"move",x:me.x,y:cameraY}));
 });
 
 function sendChat(e){
@@ -99,24 +108,86 @@ function sendChat(e){
   }
 }
 
+setInterval(()=>{
+  money += speed;
+},1000);
+
 function loop(){
   ctx.clearRect(0,0,300,500);
+  document.getElementById("hud").innerText = "💰 Geld: " + money;
 
-  // Straße
+
+  // Unendliche Straße
   ctx.fillStyle="#555";
   ctx.fillRect(50,0,200,500);
+  
+  // Doppelte Linie in der Mitte (als visueller Effekt)
+  ctx.strokeStyle="#ffff00";
+  ctx.lineWidth=2;
+  for(let i = 0; i < 10; i++) {
+    const y = (i * 50 - cameraY % 50);
+    ctx.beginPath();
+    ctx.moveTo(150, y);
+    ctx.lineTo(150, y + 25);
+    ctx.stroke();
+  }
 
+  // Spieler (bleibt in der Mitte)
+  ctx.fillStyle="red";
+  ctx.fillRect(me.x, 420, 30, 50);
+  ctx.fillStyle="white";
+  ctx.font="12px Arial";
+  ctx.fillText("Du", me.x+5, 415);
+
+  // Andere Spieler
   for(let id in players){
     let p=players[id];
-    ctx.fillStyle="red";
-    ctx.fillRect(p.x,p.y,30,50);
-    ctx.fillStyle="white";
-    ctx.fillText(p.name,p.x,p.y-5);
+    // Überspringe den eigenen Spieler
+    if(p.name === document.getElementById("name").value) continue;
+    
+    const relativeY = p.y - cameraY + 420;
+    if(relativeY > -50 && relativeY < 500) {
+      ctx.fillStyle="blue";
+      ctx.fillRect(p.x, relativeY, 30, 50);
+      ctx.fillStyle="white";
+      ctx.fillText(p.name, p.x, relativeY-5);
+    }
   }
 
   requestAnimationFrame(loop);
 }
 loop();
+let carColor = "red";
+
+function buySpeed(){
+  if(money >= 5){
+    money += 500;
+    speed += 1;
+    alert("🚀 Speed verbessert!");
+  }else{
+    alert("❌ Zu wenig Geld!");
+  }
+}
+
+function buySkin(){
+  if(money >= 100){
+    money -= 100;
+    carColor = carColor === "red" ? "green" : "red";
+    alert("🎨 Neuer Skin freigeschaltet!");
+  }else{
+    alert("❌ Zu wenig Geld!");
+  }
+}
+
+function buy(){
+  if(money >= 10000){
+    money -= 10000;
+    alert("✅ Kauf erfolgreich!");
+  }else{
+    alert("❌ Zu wenig Geld!");
+  }
+}
+
 </script>
 
 </body>
