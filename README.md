@@ -1,3 +1,3 @@
 # schul-game
 
-zum starten: "node server.js"
+zum starten: " cd bens_arcadenode server.js"

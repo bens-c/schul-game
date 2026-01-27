@@ -29,6 +29,7 @@ button{
 
 <canvas id="game" width="300" height="500"></canvas>
 
+<button id="pauseBtn" onclick="togglePause()">⏸ Pause</button>
 <button onclick="location.href='../../index.html'">⬅ Zurück zur Arcade</button>
 
 <script>
@@ -39,14 +40,21 @@ let car = {x:130,y:420};
 let enemies=[];
 let score=0;
 let gameOver=false;
+let isPaused=false;
 
 let high = localStorage.getItem("racerHigh") || 0;
 
 document.addEventListener("keydown",e=>{
-  if(e.key=="ArrowLeft") car.x-=30;
-  if(e.key=="ArrowRight") car.x+=30;
+  if(e.key=="ArrowLeft" && !isPaused) car.x-=30;
+  if(e.key=="ArrowRight" && !isPaused) car.x+=30;
   if(gameOver && e.key=="Enter") location.reload();
 });
+
+function togglePause(){
+  isPaused=!isPaused;
+  document.getElementById("pauseBtn").textContent=isPaused?"▶ Fortsetzen":"⏸ Pause";
+  if(!isPaused) loop();
+}
 
 function spawn(){
   enemies.push({x:Math.random()*240,y:-40});
@@ -87,8 +95,8 @@ function loop(){
   ctx.fillText("Score: "+score,10,20);
   ctx.fillText("High: "+high,200,20);
 
-  if(!gameOver) requestAnimationFrame(loop);
-  else drawGameOver();
+  if(!gameOver && !isPaused) requestAnimationFrame(loop);
+  else if(gameOver) drawGameOver();
 }
 
 function endGame(){
